@@ -10,16 +10,16 @@ import Image
 
 
 def main():
-    cat_image = Image.Image(image_path='data/cat.bmp')
-    high_image1 = cat_image.high_pass_filter(sigma=7)
-    dog_image = Image.Image(image_path='data/dog.bmp')
-    low_image = dog_image.low_pass_filter(sigma=7)
-    mix = Image.Image(high_image1.pixels * 0.5 + low_image.pixels * 0.5)
-    low_image.show(221)
-    high_image1.show(222)
-    mix.show(223)
+    plt.figure(figsize=(20, 12))
+    image1 = Image.Image(image_path='data/cat.bmp')
+    high_image = image1.high_pass_filter(sigma=9)
+    image2 = Image.Image(image_path='data/dog.bmp')
+    low_image = image2.low_pass_filter(sigma=9)
+    mix = high_image.mix(low_image, ratio=0.5)
+    low_image.show(231)
+    high_image.show(233)
+    mix.show(is_hybrid=True)
     plt.show()
-    pass
 
 
 if __name__ == "__main__":

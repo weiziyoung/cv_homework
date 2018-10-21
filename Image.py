@@ -5,12 +5,16 @@
 # @Software: PyCharm
 from datetime import datetime
 
+import matplotlib.image as mat_img
+import matplotlib.pyplot as plt
 import numpy as np
 from numpy import fft
-import matplotlib.pyplot as plt
-import matplotlib.image as mat_img
 
 import Kernel
+
+LOCATIONS_LIST = [(-0.1, 0.05, 0.47, 0.4), (0.26, 0.05, 0.37, 0.27),
+                  (0.58, 0.05, 0.17, 0.2), (0.75, 0.05, 0.15, 0.15),
+                  (0.9, 0.05, 0.1, 0.1)]
 
 
 class TypeException(Exception):
@@ -36,7 +40,6 @@ class Image(object):
     size = (0, 0)  # M * N
     img_name = ''
     is_grey = False
-
     low_pass = None
 
     def __init__(self, matrix=None, image_path=None, name=None):
@@ -45,7 +48,7 @@ class Image(object):
             self.img_name = image_path.split('/')[-1].split('.')[0]
         if matrix is not None:
             self.pixels = matrix
-            self.img_name = str(datetime.now()) + str(name)
+            self.img_name = str(datetime.now().strftime('%H:%M.%S')) + str(name)
         self.shape = self.pixels.shape
         # if it's a grey pic, we should flag it.
         if len(self.shape) == 3:
@@ -73,11 +76,37 @@ class Image(object):
         else:
             raise Exception('Operator "*" is a convolution operator')
 
-    def show(self, plot_loc=None):
-        if plot_loc:
-            plt.subplot(plot_loc)
-        plt.imshow(self.pixels.astype(np.uint8), 'gray')
-        plt.title(self.img_name)
+    def show(self, plot_loc=None, is_hybrid=False):
+        if not is_hybrid:
+            if plot_loc:
+                assert isinstance(plot_loc, int)
+                plt.subplot(plot_loc)
+            plt.imshow(self.pixels.astype(np.uint8), 'gray')
+            plt.title(self.img_name)
+        else:
+            pixels = self.pixels.astype(np.uint8)
+            for location in LOCATIONS_LIST:
+                axes = plt.axes(location)
+                axes.imshow(pixels)
+                axes.set_title(self.img_name)
+
+    def mix(self, image, ratio: float):
+        """
+        Mix this image with another image
+        :rtype: Image
+        """
+        def grey2RGB(pixels):
+            result = np.zeros((pixels.shape[0], pixels.shape[1], 3))
+            for i in range(3):
+                result[:, :, i] = pixels
+            return result
+        if self.shape != image.shape:
+            if len(self.shape) != 3:
+                self.pixels = grey2RGB(self.pixels)
+            elif len(image.shape) != 3:
+                image.pixels = grey2RGB(image.pixels)
+        return Image(self.pixels * ratio + image.pixels * (1-ratio),
+                     name='mixed,ratio:{ratio}'.format(ratio=ratio))
 
     def convolute(self, kernel, fourier=None):
         """
@@ -106,10 +135,8 @@ class Image(object):
         #  then we should use direct implementation, otherwise the fourier transform should be considered.
         else:
             if kernel_size < 4 * np.log(image_size) + 1:
-                print('regular')
                 return self.__base_convolution(kernel)
             else:
-                print('fourier')
                 return self.__fourier_convolution(kernel)
 
     def __base_convolution(self, kernel):
