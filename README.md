@@ -250,5 +250,9 @@ I adapted different cut-off frequency in each hybrid image so as to get the best
 5.submarine + fish![](output/submarine_fish.png)
 
 
+##Limitation
+* Some pictures cannot be mixed very well.
+* In this assignment, we define the cut-off frequency and sigma of Gaussian Filter manually.Is it possible that the programme can provide the parameter automatically based on the image?
+* Besides, the basic convolution operation is implemented by Python.Therefore, the speed is pretty slow.So, the C code extension can be considered if we want to optimize the speed.
 
 
