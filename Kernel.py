@@ -5,6 +5,7 @@
 # @Software: PyCharm
 
 import numpy as np
+from util import count_time
 
 
 class ShapeException(Exception):

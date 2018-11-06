@@ -11,6 +11,7 @@ import numpy as np
 from numpy import fft
 
 import Kernel
+from util import count_time
 
 LOCATIONS_LIST = [(-0.1, 0.05, 0.47, 0.4), (0.26, 0.05, 0.37, 0.27),
                   (0.58, 0.05, 0.17, 0.2), (0.75, 0.05, 0.15, 0.15),
@@ -35,14 +36,22 @@ def calculate(matrix1, matrix2):
 
 
 class Image(object):
+    # denote the detailed pixels in each channels, it should be a matrix with 3 dim.
     pixels = [[]]
-    shape = (0, 0, 0)  # if it is an RGB picture, shape will be a three-tuple
-    size = (0, 0)  # M * N
+    # the shape of the image, if it is an RGB picture, it will be a three-tuple, otherwise a two-tuple
+    shape = (0, 0, 0)
+    # size of the image, two-tuple.
+    size = (0, 0)
+    # can be used in 'imshow' method
     img_name = ''
+    # if it is a grey image, it will be True, otherwise be False
     is_grey = False
+    # if the low_pass method has been applied, this attribute should save the result, so that when the high
+    # _pass method is evoked,  we don't need to compute the low pass again.
     low_pass = None
 
     def __init__(self, matrix=None, image_path=None, name=None):
+
         if image_path:
             self.pixels = mat_img.imread(image_path)
             self.img_name = image_path.split('/')[-1].split('.')[0]
@@ -95,19 +104,22 @@ class Image(object):
         Mix this image with another image
         :rtype: Image
         """
+
         def grey2RGB(pixels):
             result = np.zeros((pixels.shape[0], pixels.shape[1], 3))
             for i in range(3):
                 result[:, :, i] = pixels
             return result
+
         if self.shape != image.shape:
             if len(self.shape) != 3:
                 self.pixels = grey2RGB(self.pixels)
             elif len(image.shape) != 3:
                 image.pixels = grey2RGB(image.pixels)
-        return Image(self.pixels * ratio + image.pixels * (1-ratio),
+        return Image(self.pixels * ratio + image.pixels * (1 - ratio),
                      name='mixed,ratio:{ratio}'.format(ratio=ratio))
 
+    @count_time
     def convolute(self, kernel, fourier=None):
         """
         The implement of convolution.
@@ -155,15 +167,15 @@ class Image(object):
         for pixels in pixels_list:
             output_matrix = np.zeros(self.size)
             # Create a extension matrix based on the size of kernel, so as to do the convolution operation
-            extra_m, extra_n = kernel.shape[0]//2, kernel.shape[1]//2
+            extra_m, extra_n = kernel.shape[0] // 2, kernel.shape[1] // 2
             temp_size = (self.shape[0] + extra_m * 2, self.shape[1] + extra_n * 2)
             temp_pixels = np.zeros(temp_size)
-            temp_pixels[extra_m:extra_m+self.shape[0], extra_n:extra_n + self.shape[1]] = pixels
+            temp_pixels[extra_m:extra_m + self.shape[0], extra_n:extra_n + self.shape[1]] = pixels
 
             # Start loop!
             for y_index, y in enumerate(range(extra_m, self.shape[0] + extra_m)):
                 for x_index, x in enumerate(range(extra_n, self.shape[1] + extra_n)):
-                    temp_matrix = temp_pixels[y-extra_m:y+extra_m+1, x-extra_n:x+extra_n+1]
+                    temp_matrix = temp_pixels[y - extra_m:y + extra_m + 1, x - extra_n:x + extra_n + 1]
                     temp_result = calculate(temp_matrix, kernel.array)
                     output_matrix[y_index, x_index] = temp_result
             channel_list.append(output_matrix)
@@ -188,9 +200,9 @@ class Image(object):
         for channel in range(1 if self.is_grey else 3):
             pixels = self.pixels[:, :, channel] if not self.is_grey else self.pixels
             padding_matrix = np.zeros(self.size)
-            start_point = (self.shape[0]//2 - kernel.shape[0]//2, self.shape[1]//2 - kernel.shape[1]//2)
-            padding_matrix[start_point[0]:start_point[0]+kernel.shape[0],
-                           start_point[1]:start_point[1]+kernel.shape[1]] = kernel.array
+            start_point = (self.shape[0] // 2 - kernel.shape[0] // 2, self.shape[1] // 2 - kernel.shape[1] // 2)
+            padding_matrix[start_point[0]:start_point[0] + kernel.shape[0],
+            start_point[1]:start_point[1] + kernel.shape[1]] = kernel.array
             image_transform = (fft.fft2(pixels))
             template_transform = (fft.fft2(padding_matrix))
             inverted_transform = np.abs(fft.fftshift(fft.ifft2(image_transform * template_transform)))
@@ -200,7 +212,7 @@ class Image(object):
                 output_matrix = inverted_transform
         return Image(matrix=output_matrix)
 
-    def low_pass_filter(self, sigma, size=None, fourier=False):
+    def low_pass_filter(self, sigma, size=None, fourier=None):
         """
         Filter implemented by Gaussian Kernel
         :param fourier:
@@ -212,7 +224,7 @@ class Image(object):
             size = size
         else:
             size = int(8 * sigma + 1)
-        low_filter_kernel = Kernel.GaussianKernel(size, sigma=sigma)
+        low_filter_kernel = Kernel.GaussianKernel(size, sigma)
         self.low_pass = self.convolute(low_filter_kernel, fourier=fourier)
         self.low_pass.img_name = self.img_name + ' low-pass filter'
         return self.low_pass
@@ -229,7 +241,6 @@ class Image(object):
             result = temp_result + abs(result_min)
             interval = result_max - result_min
             if interval > 255:
-                ratio = 255/interval
+                ratio = 255 / interval
                 result *= ratio
             return Image(result, name=self.img_name + ' high pass filter')
-

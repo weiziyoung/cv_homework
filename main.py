@@ -12,9 +12,9 @@ import Image
 def main():
     plt.figure(figsize=(20, 12))
     image1 = Image.Image(image_path='data/cat.bmp')
-    high_image = image1.high_pass_filter(sigma=9)
+    high_image = image1.high_pass_filter(sigma=1, fourier=False)
     image2 = Image.Image(image_path='data/dog.bmp')
-    low_image = image2.low_pass_filter(sigma=9)
+    low_image = image2.low_pass_filter(sigma=1, fourier=False)
     mix = high_image.mix(low_image, ratio=0.5)
     low_image.show(231)
     high_image.show(233)
